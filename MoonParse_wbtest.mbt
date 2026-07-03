@@ -517,3 +517,168 @@ test "space0 no-op" {
   let i = space0(ParseInput::new("text"))
   assert_eq!(i.pos, 0)
 }
+
+test "json parse null value" {
+  match json_parse(ParseInput::new("null")) {
+    Some((_, val)) => match val {
+      JsonValue::Null => assert_eq!(true, true)
+      _ => assert_eq!(true, false)
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "json parse bool true" {
+  match json_parse(ParseInput::new("true")) {
+    Some((_, val)) => match val {
+      JsonValue::Bool(b) => assert_eq!(b, true)
+      _ => assert_eq!(true, false)
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "json parse bool false" {
+  match json_parse(ParseInput::new("false")) {
+    Some((_, val)) => match val {
+      JsonValue::Bool(b) => assert_eq!(b, false)
+      _ => assert_eq!(true, false)
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "json parse number" {
+  match json_parse(ParseInput::new("3.14")) {
+    Some((_, val)) => match val {
+      JsonValue::Number(_) => assert_eq!(true, true)
+      _ => assert_eq!(true, false)
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "json parse string" {
+  match json_parse(ParseInput::new("\"hello\"")) {
+    Some((_, val)) => match val {
+      JsonValue::String(s) => assert_eq!(s, "hello")
+      _ => assert_eq!(true, false)
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "json parse empty array" {
+  match json_parse(ParseInput::new("[]")) {
+    Some((_, val)) => match val {
+      JsonValue::Array(arr) => assert_eq!(arr.length(), 0)
+      _ => assert_eq!(true, false)
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "json parse simple array" {
+  match json_parse(ParseInput::new("[1, 2, 3]")) {
+    Some((_, val)) => match val {
+      JsonValue::Array(arr) => assert_eq!(arr.length(), 3)
+      _ => assert_eq!(true, false)
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "json parse empty object" {
+  match json_parse(ParseInput::new("{}")) {
+    Some((_, val)) => match val {
+      JsonValue::Object(pairs) => assert_eq!(pairs.length(), 0)
+      _ => assert_eq!(true, false)
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "json parse simple object" {
+  match json_parse(ParseInput::new("{\"key\": \"val\"}")) {
+    Some((_, val)) => match val {
+      JsonValue::Object(pairs) => {
+        assert_eq!(pairs.length(), 1)
+        assert_eq!(pairs[0].0, "key")
+      }
+      _ => assert_eq!(true, false)
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "json parse nested object" {
+  let src = "{\"a\": {\"b\": 1}}"
+  match json_parse(ParseInput::new(src)) {
+    Some((_, val)) => match val {
+      JsonValue::Object(pairs) => assert_eq!(pairs.length(), 1)
+      _ => assert_eq!(true, false)
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "toml key bare" {
+  match toml_bare_key(ParseInput::new("hello = 1")) {
+    Some((rest, key)) => {
+      assert_eq!(key, "hello")
+      assert_eq!(rest.current(), " ")
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "toml dotted key" {
+  match toml_dotted_key(ParseInput::new("a.b.c = 1")) {
+    Some((rest, key)) => {
+      assert_eq!(key, "a.b.c")
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "toml comment" {
+  match toml_comment(ParseInput::new("# comment\n")) {
+    Some((_, content)) => assert_eq!(content.contains("comment"), true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "toml string basic" {
+  match toml_string(ParseInput::new("\"hello\"")) {
+    Some((_, s)) => assert_eq!(s, "hello")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "toml boolean" {
+  match toml_bool(ParseInput::new("true")) {
+    Some((_, b)) => assert_eq!(b, true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "toml integer" {
+  match toml_integer(ParseInput::new("42")) {
+    Some((_, v)) => assert_eq!(v, 42)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "toml table header" {
+  match toml_table_header(ParseInput::new("[database]")) {
+    Some((_, name)) => assert_eq!(name, "database")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "toml array table header" {
+  match toml_array_table_header(ParseInput::new("[[servers]]")) {
+    Some((_, name)) => assert_eq!(name, "servers")
+    None => assert_eq!(true, false)
+  }
+}
