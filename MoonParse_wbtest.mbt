@@ -1123,3 +1123,235 @@ test "error context multiple errors" {
   assert_eq!(fmt.contains("e2"), true)
 }
 
+test "newline lf match" {
+  match newline(ParseInput::new("\nrest")) {
+    Some((rest, _)) => assert_eq!(rest.current(), "r")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "newline crlf match" {
+  match newline(ParseInput::new("\r\nrest")) {
+    Some((rest, _)) => assert_eq!(rest.current(), "r")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "satisfy custom predicate" {
+  match satisfy(fn(c) -> Bool { c == "x" }, ParseInput::new("xyz")) {
+    Some((_, ch)) => assert_eq!(ch, "x")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "satisfy rejects wrong char" {
+  match satisfy(fn(c) -> Bool { c == "x" }, ParseInput::new("abc")) {
+    Some(_) => assert_eq!(true, false)
+    None => assert_eq!(true, true)
+  }
+}
+
+test "skip_while skips matching" {
+  let i = skip_while(is_digit, ParseInput::new("123abc"))
+  assert_eq!(i.current(), "a")
+}
+
+test "skip_while all match reaches eof" {
+  let i = skip_while(is_digit, ParseInput::new("999"))
+  assert_eq!(i.is_eof(), true)
+}
+
+test "many0 at eof returns empty" {
+  let (_, vals) = many0(digit, ParseInput::new(""))
+  assert_eq!(vals.length(), 0)
+}
+
+test "many1 at eof returns none" {
+  match many1(digit, ParseInput::new("")) {
+    Some(_) => assert_eq!(true, false)
+    None => assert_eq!(true, true)
+  }
+}
+
+test "separated_list trailing separator" {
+  let (_, vals) = separated_list(alpha, tag_fn(","), ParseInput::new("a,b,"))
+  assert_eq!(vals.length(), 2)
+}
+
+test "separated_list1 with trailing sep" {
+  match separated_list1(alpha, tag_fn(","), ParseInput::new("a,b,")) {
+    Some((_, vals)) => assert_eq!(vals.length(), 2)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "tuple2 second parser fails" {
+  match tuple2(alpha, digit, ParseInput::new("ab")) {
+    Some(_) => assert_eq!(true, false)
+    None => assert_eq!(true, true)
+  }
+}
+
+test "tuple3 all parsers succeed" {
+  match tuple3(alpha, alpha, alpha, ParseInput::new("abc")) {
+    Some((_, (a, b, c))) => assert_eq!(a + b + c, "abc")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "delimited missing right bracket" {
+  match delimited(tag_fn("["), tag_fn("x"), tag_fn("]"), ParseInput::new("[x")) {
+    Some(_) => assert_eq!(true, false)
+    None => assert_eq!(true, true)
+  }
+}
+
+test "terminated missing suffix" {
+  match terminated(tag_fn("ab"), tag_fn(";"), ParseInput::new("ab")) {
+    Some(_) => assert_eq!(true, false)
+    None => assert_eq!(true, true)
+  }
+}
+
+test "preceded missing prefix" {
+  match preceded(tag_fn("//"), tag_fn("x"), ParseInput::new("x")) {
+    Some(_) => assert_eq!(true, false)
+    None => assert_eq!(true, true)
+  }
+}
+
+test "many_n with excess input" {
+  match many_n(digit, 2, ParseInput::new("12345")) {
+    Some((rest, vals)) => {
+      assert_eq!(vals.length(), 2)
+      assert_eq!(rest.current(), "3")
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "many_till empty before end marker" {
+  match many_till(alpha, tag_fn(";"), ParseInput::new(";")) {
+    Some((_, (vals, _))) => assert_eq!(vals.length(), 0)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "many_till end marker not found" {
+  match many_till(alpha, tag_fn(";"), ParseInput::new("abc")) {
+    Some(_) => assert_eq!(true, false)
+    None => assert_eq!(true, true)
+  }
+}
+
+test "not_parser blocks matched input" {
+  match not_parser(tag_fn("hello"), ParseInput::new("world")) {
+    Some(_) => assert_eq!(true, true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "not_parser fails on matching input" {
+  match not_parser(tag_fn("hello"), ParseInput::new("hello")) {
+    Some(_) => assert_eq!(true, false)
+    None => assert_eq!(true, true)
+  }
+}
+
+test "parse_scientific positive exponent" {
+  match parse_scientific(ParseInput::new("1.5e+2")) {
+    Some((_, v)) => assert_eq!(v > 100.0, true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "parse_scientific negative exponent" {
+  match parse_scientific(ParseInput::new("5.0e-1")) {
+    Some((_, v)) => assert_eq!(v < 1.0, true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "hex_digit uppercase A to F" {
+  match hex_digit(ParseInput::new("D9")) {
+    Some((_, ch)) => assert_eq!(ch, "D")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "hex_digit lowercase a to f" {
+  match hex_digit(ParseInput::new("c0")) {
+    Some((_, ch)) => assert_eq!(ch, "c")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "take_until found at start" {
+  match take_until("END", ParseInput::new("helloENDworld")) {
+    Some((rest, s)) => {
+      assert_eq!(s, "hello")
+      assert_eq!(rest.current(), "E")
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "take_until not found returns none" {
+  match take_until("END", ParseInput::new("hello")) {
+    Some(_) => assert_eq!(true, false)
+    None => assert_eq!(true, true)
+  }
+}
+
+test "quoted_string with tab escape" {
+  match quoted_string(ParseInput::new("\"a\\tb\"")) {
+    Some((_, v)) => assert_eq!(v.contains("\t"), true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "quoted_string with backslash escape" {
+  match quoted_string(ParseInput::new("\"a\\\\b\"")) {
+    Some((_, v)) => assert_eq!(v.contains("\\"), true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "quoted_string with quote escape" {
+  match quoted_string(ParseInput::new("\"a\\\"b\"")) {
+    Some((_, v)) => assert_eq!(v.contains("\""), true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "keyword inside expression" {
+  match keyword("else", ParseInput::new("if x else y")) {
+    Some((_, v)) => assert_eq!(v, "else")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "keyword rejected when part of identifier" {
+  match keyword("if", ParseInput::new("ifx")) {
+    Some(_) => assert_eq!(true, false)
+    None => assert_eq!(true, true)
+  }
+}
+
+test "url host preserves port" {
+  match url_host(ParseInput::new("example.com:8080/path")) {
+    Some((rest, h)) => {
+      assert_eq!(h, "example.com:8080")
+      assert_eq!(rest.current(), "/")
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "http version with trailing space" {
+  match http_version(ParseInput::new("HTTP/1.1 ")) {
+    Some((_, ver)) => assert_eq!(ver, "1.1")
+    None => assert_eq!(true, false)
+  }
+}
+
