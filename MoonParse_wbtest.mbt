@@ -682,3 +682,212 @@ test "toml array table header" {
     None => assert_eq!(true, false)
   }
 }
+
+test "toml dotted key deep" {
+  match toml_dotted_key(ParseInput::new("database.mysql.port = 3306")) {
+    Some((rest, key)) => assert_eq!(key, "database.mysql.port")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "toml integer negative" {
+  match toml_integer(ParseInput::new("-99")) {
+    Some((_, v)) => assert_eq!(v, -99)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "toml false" {
+  match toml_bool(ParseInput::new("false")) {
+    Some((_, b)) => assert_eq!(b, false)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "json parse integer" {
+  match json_parse(ParseInput::new("42")) {
+    Some((_, val)) => match val {
+      JsonValue::Number(_) => assert_eq!(true, true)
+      _ => assert_eq!(true, false)
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "json parse negative number" {
+  match json_parse(ParseInput::new("-3.14")) {
+    Some((_, val)) => match val {
+      JsonValue::Number(_) => assert_eq!(true, true)
+      _ => assert_eq!(true, false)
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "json parse string array" {
+  match json_parse(ParseInput::new("[\"a\", \"b\"]")) {
+    Some((_, val)) => match val {
+      JsonValue::Array(arr) => assert_eq!(arr.length(), 2)
+      _ => assert_eq!(true, false)
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "json value to string null" {
+  assert_eq!(json_value_to_string(JsonValue::Null), "null")
+}
+
+test "json value to string bool" {
+  assert_eq!(json_value_to_string(JsonValue::Bool(true)), "true")
+}
+
+test "json value to string number" {
+  let s = json_value_to_string(JsonValue::Number(3.14))
+  assert_eq!(s.contains("3.14"), true)
+}
+
+test "json value to string array" {
+  let val = JsonValue::Array([JsonValue::Null, JsonValue::Bool(false)])
+  let s = json_value_to_string(val)
+  assert_eq!(s.contains("null"), true)
+  assert_eq!(s.contains("false"), true)
+}
+
+test "hex to int boundary" {
+  match parse_hex_int(ParseInput::new("0x0")) {
+    Some((_, v)) => assert_eq!(v, 0)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "hex to int max byte" {
+  match parse_hex_int(ParseInput::new("0xFF")) {
+    Some((_, v)) => assert_eq!(v, 255)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "identifier with digits" {
+  match identifier(ParseInput::new("abc123def")) {
+    Some((_, v)) => assert_eq!(v, "abc123def")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "keyword followed by space" {
+  match keyword("if", ParseInput::new("if x > 0")) {
+    Some((_, v)) => assert_eq!(v, "if")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "keyword not followed by identifier char" {
+  match keyword("if", ParseInput::new("ifx")) {
+    Some(_) => assert_eq!(true, false)
+    None => assert_eq!(true, true)
+  }
+}
+
+test "multispace0 preserves pos when no whitespace" {
+  let i = multispace0(ParseInput::new("text"))
+  assert_eq!(i.pos, 0)
+}
+
+test "space0 handles empty input" {
+  let i = space0(ParseInput::new(""))
+  assert_eq!(i.is_eof(), true)
+}
+
+test "many_n insufficient count" {
+  match many_n(digit, 5, ParseInput::new("12ab")) {
+    Some(_) => assert_eq!(true, false)
+    None => assert_eq!(true, true)
+  }
+}
+
+test "many_n zero" {
+  match many_n(digit, 0, ParseInput::new("abc")) {
+    Some((_, vals)) => assert_eq!(vals.length(), 0)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "http version parse" {
+  match http_version(ParseInput::new("HTTP/1.1 200 OK")) {
+    Some((_, ver)) => assert_eq!(ver, "1.1")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "url separator" {
+  match url_separator(ParseInput::new("://example.com")) {
+    Some((_, _)) => assert_eq!(true, true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "sql star" {
+  match sql_star(ParseInput::new("* FROM users")) {
+    Some((_, _)) => assert_eq!(true, true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "sql string value" {
+  match sql_string_value(ParseInput::new("'hello'")) {
+    Some((_, s)) => assert_eq!(s, "hello")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "sql number value" {
+  match sql_number_value(ParseInput::new("3.14")) {
+    Some((_, _)) => assert_eq!(true, true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "whitespace line newline" {
+  match whitespace_line(ParseInput::new("\n")) {
+    Some(_) => assert_eq!(true, true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "whitespace line spaces then newline" {
+  match whitespace_line(ParseInput::new("  \t\n")) {
+    Some(_) => assert_eq!(true, true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "config comment double slash" {
+  match config_comment(ParseInput::new("// comment\n")) {
+    Some(_) => assert_eq!(true, true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "counted string" {
+  match counted_string(ParseInput::new("\x00\x00\x00\x05hello")) {
+    Some(_) => assert_eq!(true, true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "leb128 unsigned small value" {
+  match leb128_u(ParseInput::new("\x01")) {
+    Some((_, v)) => assert_eq!(v, 1)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "many_till collects until end marker" {
+  let i = ParseInput::new("abc;")
+  match many_till(alpha, tag_fn(";"), i) {
+    Some((_, (vals, _))) => assert_eq!(vals.length(), 3)
+    None => assert_eq!(true, false)
+  }
+}
+
