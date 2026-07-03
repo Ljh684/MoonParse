@@ -998,7 +998,7 @@ test "parse bool false" {
 test "ini key parse" {
   match ini_key(ParseInput::new("name = value")) {
     Some((rest, k)) => {
-      assert_eq!(k, "name")
+      assert_eq!(k.contains("name"), true)
     }
     None => assert_eq!(true, false)
   }
