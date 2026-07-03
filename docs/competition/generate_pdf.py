@@ -9,8 +9,8 @@ if not os.path.exists(local_font):
         if os.path.exists(fp): shutil.copy(fp, local_font); break
 if not os.path.exists(local_font): print("ERROR: No Chinese font!"); exit(1)
 
-PRIMARY = (95, 55, 45)
-LIGHT = (252, 245, 242)
+PRIMARY = (75, 45, 105)
+LIGHT = (248, 245, 252)
 
 class PDF(FPDF):
     def __init__(self):
@@ -34,7 +34,7 @@ class PDF(FPDF):
     def info(self, label, value):
         self.set_font("F", "B", 7.5); self.set_text_color(*PRIMARY)
         self.cell(26, 4.5, "  "+label)
-        self.set_font("F", "", 7.5); self.set_text_color(50,35,25)
+        self.set_font("F", "", 7.5); self.set_text_color(40,30,60)
         self.cell(0, 4.5, value, new_x="LMARGIN", new_y="NEXT")
     def body(self, text):
         self.set_font("F", "", 7); self.set_text_color(80,70,60)
@@ -49,7 +49,7 @@ class PDF(FPDF):
     def t_row(self, cells, widths, bold=False):
         self.set_fill_color(*LIGHT) if bold else self.set_fill_color(255,255,255)
         self.set_font("F", "B", 7) if bold else self.set_font("F", "", 7)
-        self.set_text_color(50,35,25); h=4.8
+        self.set_text_color(40,30,60); h=4.8
         self.set_x(self.l_margin+5)
         for i, (cell, w) in enumerate(zip(cells, widths)):
             self.rect(self.get_x(), self.get_y(), w, h, style="DF")
