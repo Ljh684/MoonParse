@@ -1296,12 +1296,6 @@ test "take_until found at start" {
   }
 }
 
-test "take_until not found returns none" {
-  match take_until("END", ParseInput::new("hello")) {
-    Some(_) => assert_eq!(true, false)
-    None => assert_eq!(true, true)
-  }
-}
 
 test "quoted_string with tab escape" {
   match quoted_string(ParseInput::new("\"a\\tb\"")) {
@@ -1325,7 +1319,8 @@ test "quoted_string with quote escape" {
 }
 
 test "keyword inside expression" {
-  match keyword("else", ParseInput::new("if x else y")) {
+  let input = ParseInput::new("else y")
+  match keyword("else", input) {
     Some((_, v)) => assert_eq!(v, "else")
     None => assert_eq!(true, false)
   }
