@@ -891,3 +891,235 @@ test "many_till collects until end marker" {
   }
 }
 
+test "input line col tracking" {
+  let i = ParseInput::new("ab\ncd\nef")
+  let i2 = i.advance_by(3)
+  assert_eq!(i2.line, 2)
+  assert_eq!(i2.col, 1)
+}
+
+test "input slice positions" {
+  let i = ParseInput::new("hello world")
+  let s = i.slice(0, 5)
+  assert_eq!(s, "hello")
+}
+
+test "input source length" {
+  let i = ParseInput::new("test")
+  assert_eq!(i.source_len(), 4)
+}
+
+test "tag at exact end" {
+  match tag("abc", ParseInput::new("abc")) {
+    Some((rest, _)) => assert_eq!(rest.is_eof(), true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "hex_digit lowercase" {
+  match hex_digit(ParseInput::new("a1")) {
+    Some((_, ch)) => assert_eq!(ch, "a")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "hex_digit uppercase" {
+  match hex_digit(ParseInput::new("F1")) {
+    Some((_, ch)) => assert_eq!(ch, "F")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "alphanumeric letter" {
+  match alphanumeric(ParseInput::new("a1")) {
+    Some((_, ch)) => assert_eq!(ch, "a")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "alphanumeric digit" {
+  match alphanumeric(ParseInput::new("1a")) {
+    Some((_, ch)) => assert_eq!(ch, "1")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "multispace1 none" {
+  match multispace1(ParseInput::new("text")) {
+    Some(_) => assert_eq!(true, false)
+    None => assert_eq!(true, true)
+  }
+}
+
+test "multispace1 matches" {
+  match multispace1(ParseInput::new("\n\rtext")) {
+    Some((rest, _)) => assert_eq!(rest.current(), "t")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "rest returns remaining" {
+  match rest(ParseInput::new("hello")) {
+    Some((_, s)) => assert_eq!(s, "hello")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "peek does not consume" {
+  let i = ParseInput::new("abc")
+  match peek(alpha, i) {
+    Some((_, _)) => assert_eq!(i.pos, 0)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "triple quoted string" {
+  match triple_quoted_string(ParseInput::new("\"\"\"hello\nworld\"\"\"")) {
+    Some((_, s)) => assert_eq!(s.contains("hello"), true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "parse bool true" {
+  match parse_bool(ParseInput::new("true")) {
+    Some((_, b)) => assert_eq!(b, true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "parse bool false" {
+  match parse_bool(ParseInput::new("false")) {
+    Some((_, b)) => assert_eq!(b, false)
+    None => assert_eq!(true, false)
+  }
+}
+
+
+test "ini key parse" {
+  match ini_key(ParseInput::new("name = value")) {
+    Some((rest, k)) => {
+      assert_eq!(k, "name")
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "ini value parse" {
+  match ini_value(ParseInput::new("hello")) {
+    Some((_, v)) => assert_eq!(v, "hello")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "http version with space" {
+  match http_version(ParseInput::new("HTTP/2.0 ")) {
+    Some((_, ver)) => assert_eq!(ver, "2.0")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "sql identifier basic" {
+  match sql_identifier(ParseInput::new("users WHERE")) {
+    Some((rest, name)) => {
+      assert_eq!(name, "users")
+      assert_eq!(rest.current(), " ")
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "url path parsing" {
+  match url_path(ParseInput::new("/api/users?page=1")) {
+    Some((rest, path)) => assert_eq!(path.contains("/api/users"), true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "url query parsing" {
+  match url_query(ParseInput::new("page=1#section")) {
+    Some((rest, q)) => {
+      assert_eq!(q, "page=1")
+      assert_eq!(rest.current(), "#")
+    }
+    None => assert_eq!(true, false)
+  }
+}
+
+test "url fragment parsing" {
+  match url_fragment(ParseInput::new("section top")) {
+    Some((_, f)) => assert_eq!(f, "section")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "http header value" {
+  match http_header_value(ParseInput::new("  text/html")) {
+    Some((_, v)) => assert_eq!(v.contains("text/html"), true)
+    None => assert_eq!(true, false)
+  }
+}
+
+test "json array of strings" {
+  match json_parse(ParseInput::new("[\"a\", \"b\"]")) {
+    Some((_, JsonValue::Array(arr))) => assert_eq!(arr.length(), 2)
+    _ => assert_eq!(true, false)
+  }
+}
+
+test "json nested array" {
+  match json_parse(ParseInput::new("[[1, 2], [3, 4]]")) {
+    Some((_, JsonValue::Array(arr))) => assert_eq!(arr.length(), 2)
+    _ => assert_eq!(true, false)
+  }
+}
+
+test "toml dotted array table" {
+  match toml_array_table_header(ParseInput::new("[[product.widgets]]")) {
+    Some((_, name)) => assert_eq!(name, "product.widgets")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "toml dotted table header" {
+  match toml_table_header(ParseInput::new("[database.mysql]")) {
+    Some((_, name)) => assert_eq!(name, "database.mysql")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "json value to string complex" {
+  let val = JsonValue::Array([
+    JsonValue::Number(1.0),
+    JsonValue::String("two"),
+    JsonValue::Bool(true)
+  ])
+  let s = json_value_to_string(val)
+  assert_eq!(s.contains("1"), true)
+  assert_eq!(s.contains("two"), true)
+  assert_eq!(s.contains("true"), true)
+}
+
+test "cond with true runs parser" {
+  match cond(true, tag_fn("hi"), ParseInput::new("hi")) {
+    Some((_, v)) => assert_eq!(v, "hi")
+    None => assert_eq!(true, false)
+  }
+}
+
+test "cond with false skips" {
+  match cond(false, tag_fn("hi"), ParseInput::new("hi")) {
+    Some(_) => assert_eq!(true, false)
+    None => assert_eq!(true, true)
+  }
+}
+
+test "error context multiple errors" {
+  let ctx = ErrorContext::new()
+  let err1 = ParseError::new("e1", ParseInput::new("x"))
+  let err2 = ParseError::new("e2", ParseInput::new("x"))
+  let ctx2 = ctx.add_error(err1).add_error(err2)
+  let fmt = ctx2.format()
+  assert_eq!(fmt.contains("e1"), true)
+  assert_eq!(fmt.contains("e2"), true)
+}
+
