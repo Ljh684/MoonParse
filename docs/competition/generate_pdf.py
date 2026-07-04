@@ -91,14 +91,16 @@ class PDF(FPDF):
 pdf = PDF(); pdf.set_auto_page_break(auto=False); pdf.add_page()
 
 # Header area
-pdf.set_fill_color(*ACCENT)
-pdf.rect(pdf.l_margin, 0, pdf.w-pdf.l_margin-pdf.r_margin, 28, style="F")
-pdf.set_y(6)
-pdf.set_font("F", "B", 16); pdf.set_text_color(255,255,255)
-pdf.cell(0, 8, "MoonParse", align="C", new_x="LMARGIN", new_y="NEXT")
-pdf.set_font("F", "", 7.5); pdf.set_text_color(180,175,168)
+pdf.set_y(8)
+pdf.set_font("F", "B", 18); pdf.set_text_color(*DARK)
+pdf.cell(0, 9, "MoonParse", align="C", new_x="LMARGIN", new_y="NEXT")
+pdf.set_font("F", "", 7.5); pdf.set_text_color(*MID)
 pdf.cell(0, 5, "2026 MoonBit 国产开源生态竞赛 · 个人赛", align="C", new_x="LMARGIN", new_y="NEXT")
-pdf.set_y(31)
+# underline
+pdf.set_draw_color(*ACCENT); pdf.set_line_width(0.8)
+pdf.line(pdf.l_margin+50, pdf.get_y()+2, pdf.w-pdf.r_margin-50, pdf.get_y()+2)
+pdf.set_draw_color(0,0,0); pdf.set_line_width(0.2)
+pdf.set_y(28)
 
 # 01
 pdf.heading("基本信息")
