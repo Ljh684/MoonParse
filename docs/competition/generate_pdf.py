@@ -91,7 +91,7 @@ class PDF(FPDF):
 pdf = PDF(); pdf.set_auto_page_break(auto=False); pdf.add_page()
 
 # Header area
-pdf.set_fill_color(*DARK)
+pdf.set_fill_color(*ACCENT)
 pdf.rect(pdf.l_margin, 0, pdf.w-pdf.l_margin-pdf.r_margin, 28, style="F")
 pdf.set_y(6)
 pdf.set_font("F", "B", 16); pdf.set_text_color(255,255,255)
