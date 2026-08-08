@@ -3,11 +3,12 @@ from fpdf import FPDF
 import os, shutil
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
-local_font = os.path.join(script_dir, "font.ttc")
-if not os.path.exists(local_font):
-    for fp in ["C:/Windows/Fonts/msyh.ttc","C:/Windows/Fonts/msyhbd.ttc","C:/Windows/Fonts/simsun.ttc","C:/Windows/Fonts/simhei.ttf"]:
-        if os.path.exists(fp): shutil.copy(fp, local_font); break
-if not os.path.exists(local_font): print("ERROR: No Chinese font!"); exit(1)
+local_font = None
+for fp in ["C:/Windows/Fonts/msyh.ttc","C:/Windows/Fonts/msyhbd.ttc","C:/Windows/Fonts/simsun.ttc","C:/Windows/Fonts/simhei.ttf"]:
+    if os.path.exists(fp): local_font = fp; break
+if local_font is None:
+    print("WARNING: No Chinese font found. PDF may have garbled Chinese text.")
+    local_font = os.path.join(script_dir, "font.ttc")  # fallback path (not committed)
 
 ACCENT = (180, 130, 30)    # warm gold
 DARK  = (45, 42, 38)       # near black

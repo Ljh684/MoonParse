@@ -1,0 +1,13 @@
+name: moonparse
+version: 0.1.3
+description: A parser combinator library for MoonBit with JSON, TOML, and binary parsing support
+repository: https://gitlink.org.cn/a678b789/MoonParse
+license: Apache-2.0
+keywords:
+  - parser
+  - combinator
+  - parsing
+  - json
+  - toml
+  - binary
+  - leb128

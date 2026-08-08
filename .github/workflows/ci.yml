@@ -1,20 +1,26 @@
-name: moonparse-ci
-
-on:
-  push:
-  pull_request:
-
+name: CI
+on: [push, pull_request]
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  check:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - name: Install MoonBit
-        run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
-          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
-      - name: Check project
-        run: |
-          moon info
-          moon fmt --check
-          moon test
+        run: curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+      - name: Add MoonBit to PATH
+        run: echo "$HOME/.moon/bin" >> $GITHUB_PATH
+      - name: Update Registry
+        run: moon update
+      - name: Moon Info (deny interface diff)
+        run: moon info && git diff --exit-code
+      - name: Moon Check (deny warnings)
+        run: moon check --deny-warn
+      - name: Moon Format Check
+        run: moon fmt --check
+      - name: Moon Test (deny warnings)
+        run: moon test --deny-warn
+      - name: Moon Build
+        run: moon build

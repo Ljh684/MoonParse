@@ -1,5 +1,6 @@
 // Full JSON parser built on MoonParse combinators
 
+///|
 pub(all) enum JsonValue {
   Null
   Bool(Bool)
@@ -10,52 +11,67 @@ pub(all) enum JsonValue {
 }
 
 // Forward declaration helpers
+
+///|
 fn parse_json_value(input : ParseInput) -> (ParseInput, JsonValue)? {
   let i = multispace0(input)
-  if i.is_eof() { return None }
+  if i.is_eof() {
+    return None
+  }
   match parse_json_string(i) {
     Some((r, v)) => Some((r, JsonValue::String(v)))
-    None => match parse_json_number_val(i) {
-      Some((r, v)) => Some((r, JsonValue::Number(v)))
-      None => match parse_json_bool_val(i) {
-        Some((r, v)) => Some((r, JsonValue::Bool(v)))
-        None => match parse_json_null_val(i) {
-          Some((r, _)) => Some((r, JsonValue::Null))
-          None => match parse_json_array(i) {
-            Some((r, v)) => Some((r, JsonValue::Array(v)))
-            None => match parse_json_object(i) {
-              Some((r, v)) => Some((r, JsonValue::Object(v)))
-              None => None
-            }
+    None =>
+      match parse_json_number_val(i) {
+        Some((r, v)) => Some((r, JsonValue::Number(v)))
+        None =>
+          match parse_json_bool_val(i) {
+            Some((r, v)) => Some((r, JsonValue::Bool(v)))
+            None =>
+              match parse_json_null_val(i) {
+                Some((r, _)) => Some((r, JsonValue::Null))
+                None =>
+                  match parse_json_array(i) {
+                    Some((r, v)) => Some((r, JsonValue::Array(v)))
+                    None =>
+                      match parse_json_object(i) {
+                        Some((r, v)) => Some((r, JsonValue::Object(v)))
+                        None => None
+                      }
+                  }
+              }
           }
-        }
       }
-    }
   }
 }
 
+///|
 fn parse_json_string(input : ParseInput) -> (ParseInput, String)? {
   quoted_string(input)
 }
 
+///|
 fn parse_json_number_val(input : ParseInput) -> (ParseInput, Float)? {
   parse_float(input)
 }
 
+///|
 fn parse_json_bool_val(input : ParseInput) -> (ParseInput, Bool)? {
   match tag("true", input) {
     Some((r, _)) => Some((r, true))
-    None => match tag("false", input) {
-      Some((r, _)) => Some((r, false))
-      None => None
-    }
+    None =>
+      match tag("false", input) {
+        Some((r, _)) => Some((r, false))
+        None => None
+      }
   }
 }
 
+///|
 fn parse_json_null_val(input : ParseInput) -> (ParseInput, String)? {
   tag("null", input)
 }
 
+///|
 fn parse_json_array(input : ParseInput) -> (ParseInput, Array[JsonValue])? {
   let i = multispace0(input)
   match tag("[", i) {
@@ -70,7 +86,11 @@ fn parse_json_array(input : ParseInput) -> (ParseInput, Array[JsonValue])? {
   }
 }
 
-fn parse_json_array_elements(input : ParseInput, acc : Array[JsonValue]) -> (ParseInput, Array[JsonValue])? {
+///|
+fn parse_json_array_elements(
+  input : ParseInput,
+  acc : Array[JsonValue],
+) -> (ParseInput, Array[JsonValue])? {
   let i = multispace0(input)
   match parse_json_value(i) {
     Some((r1, val)) => {
@@ -91,7 +111,10 @@ fn parse_json_array_elements(input : ParseInput, acc : Array[JsonValue]) -> (Par
   }
 }
 
-fn parse_json_object(input : ParseInput) -> (ParseInput, Array[(String, JsonValue)])? {
+///|
+fn parse_json_object(
+  input : ParseInput,
+) -> (ParseInput, Array[(String, JsonValue)])? {
   let i = multispace0(input)
   match tag("{", i) {
     Some((r1, _)) => {
@@ -105,7 +128,11 @@ fn parse_json_object(input : ParseInput) -> (ParseInput, Array[(String, JsonValu
   }
 }
 
-fn parse_json_object_pairs(input : ParseInput, acc : Array[(String, JsonValue)]) -> (ParseInput, Array[(String, JsonValue)])? {
+///|
+fn parse_json_object_pairs(
+  input : ParseInput,
+  acc : Array[(String, JsonValue)],
+) -> (ParseInput, Array[(String, JsonValue)])? {
   let i = multispace0(input)
   match quoted_string(i) {
     Some((r1, key)) => {
@@ -139,12 +166,16 @@ fn parse_json_object_pairs(input : ParseInput, acc : Array[(String, JsonValue)])
 }
 
 // Public API
+
+///|
 pub fn json_parse(input : ParseInput) -> (ParseInput, JsonValue)? {
   let i = multispace0(input)
   parse_json_value(i)
 }
 
 // Helper: format JsonValue back to string
+
+///|
 pub fn json_value_to_string(val : JsonValue) -> String {
   match val {
     JsonValue::Null => "null"
@@ -156,19 +187,39 @@ pub fn json_value_to_string(val : JsonValue) -> String {
   }
 }
 
-fn json_array_to_string(arr : Array[JsonValue], idx : Int, result : String) -> String {
-  if idx >= arr.length() { result + "]" }
-  else {
+///|
+fn json_array_to_string(
+  arr : Array[JsonValue],
+  idx : Int,
+  result : String,
+) -> String {
+  if idx >= arr.length() {
+    result + "]"
+  } else {
     let sep = if idx > 0 { "," } else { "" }
-    json_array_to_string(arr, idx + 1, result + sep + json_value_to_string(arr[idx]))
+    json_array_to_string(
+      arr,
+      idx + 1,
+      result + sep + json_value_to_string(arr[idx]),
+    )
   }
 }
 
-fn json_object_to_string(pairs : Array[(String, JsonValue)], idx : Int, result : String) -> String {
-  if idx >= pairs.length() { result + "}" }
-  else {
+///|
+fn json_object_to_string(
+  pairs : Array[(String, JsonValue)],
+  idx : Int,
+  result : String,
+) -> String {
+  if idx >= pairs.length() {
+    result + "}"
+  } else {
     let (k, v) = pairs[idx]
     let sep = if idx > 0 { "," } else { "" }
-    json_object_to_string(pairs, idx + 1, result + sep + "\"" + k + "\":" + json_value_to_string(v))
+    json_object_to_string(
+      pairs,
+      idx + 1,
+      result + sep + "\"" + k + "\":" + json_value_to_string(v),
+    )
   }
 }

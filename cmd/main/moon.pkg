@@ -2,6 +2,4 @@
 //   "placeholder/MoonParse" @lib,
 // }
 
-options(
-  "is-main": true,
-)
+pkgtype(kind: "executable")
